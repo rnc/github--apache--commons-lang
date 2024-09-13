@@ -1,0 +1,14 @@
+FROM quay.io/redhat-user-workloads/konflux-jbs-pnc-tenant/jvm-build-service-builder-images/ubi7:026b26ba92b1d56ffcd172e7785e679437fcff70
+USER 0
+WORKDIR /var/workdir
+RUN mkdir -p /var/workdir/software/settings /original-content/marker
+COPY .jbs/run-build.sh /var/workdir
+COPY . /var/workdir/workspace/source/
+RUN /var/workdir/run-build.sh
+FROM quay.io/ncross/hacbs-jvm-build-request-processor:dev AS build-request-processor
+USER 0
+WORKDIR /var/workdir
+COPY --from=0 /var/workdir/ /var/workdir/
+RUN /opt/jboss/container/java/run/run-java.sh copy-artifacts --source-path=/var/workdir/workspace/source --deploy-path=/var/workdir/workspace/artifacts
+FROM scratch
+COPY --from=1 /var/workdir/workspace/artifacts /
